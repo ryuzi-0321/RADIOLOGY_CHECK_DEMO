@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-heading"><div><a class="back" href="{% url 'history' %}">← 履歴へ戻る</a><h1>{{ record.template.equipment.name }} {{ record.template.name }}</h1><p>{{ record.inspection_date }}／{{ record.inspected_by.get_full_name|default:record.inspected_by.username }}</p></div><span class="badge {% if record.status == 'abnormal' %}abnormal{% else %}normal{% endif %}">{{ record.get_status_display }}</span></div>
+<section class="card"><h2>点検項目</h2>{% for answer in record.answers.all %}<div class="detail-row"><strong>{% if answer.checked %}✓{% else %}—{% endif %} {{ answer.item.label }}</strong><span>{{ answer.note|default:'メモなし' }}</span></div>{% endfor %}</section>
+<section class="card"><h2>異常・対応</h2><dl><dt>異常内容</dt><dd>{{ record.abnormal_details|default:'なし'|linebreaksbr }}</dd><dt>対応内容</dt><dd>{{ record.action_taken|default:'なし'|linebreaksbr }}</dd><dt>登録日時</dt><dd>{{ record.created_at }}</dd></dl></section>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-heading">
+  <div><h1>本日の点検</h1><p>{{ today|date:'Y年n月j日' }}／{{ user.get_full_name|default:user.username }}</p></div>
+  <a class="button" href="{% url 'export_excel' %}">Excel出力</a>
+</div>
+<div class="stats">
+  <div class="stat card"><span>完了</span><strong>{{ completed_count }}</strong></div>
+  <div class="stat card"><span>未実施</span><strong>{{ pending_count }}</strong></div>
+  <div class="stat card danger"><span>異常あり</span><strong>{{ abnormal_count }}</strong></div>
+</div>
+<div class="card-grid">
+{% for card in cards %}
+  <section class="card equipment-card">
+    <div>
+      <span class="eyebrow">{{ card.template.equipment.category }}</span>
+      <h2>{{ card.template.equipment.name }}</h2>
+      <p>{{ card.template.name }}・{{ card.template.items.count }}項目</p>
+    </div>
+    {% if card.record %}
+      <div class="status-row">
+        <span class="badge {% if card.record.status == 'abnormal' %}abnormal{% else %}normal{% endif %}">{{ card.record.get_status_display }}</span>
+        <small>{{ card.record.inspected_by.get_full_name|default:card.record.inspected_by.username }}</small>
+      </div>
+      <a class="button full" href="{% url 'perform_inspection' card.template.id %}">内容を確認・修正</a>
+    {% else %}
+      <span class="badge pending">未実施</span>
+      <a class="button primary full" href="{% url 'perform_inspection' card.template.id %}">点検を開始</a>
+    {% endif %}
+  </section>
+{% empty %}
+  <div class="card"><p>点検表がありません。管理画面または seed_demo コマンドで登録してください。</p></div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-heading"><div><h1>点検履歴</h1><p>直近300件まで表示</p></div><a class="button" href="{% url 'export_excel' %}?start={{ filters.start }}&end={{ filters.end }}">表示期間をExcel出力</a></div>
+<form method="get" class="card filter-form">
+  <input name="q" value="{{ filters.q }}" placeholder="装置・担当者・異常内容を検索">
+  <select name="status"><option value="">すべての結果</option><option value="normal" {% if filters.status == 'normal' %}selected{% endif %}>正常</option><option value="abnormal" {% if filters.status == 'abnormal' %}selected{% endif %}>異常あり</option></select>
+  <input type="date" name="start" value="{{ filters.start }}"><input type="date" name="end" value="{{ filters.end }}">
+  <button class="button primary" type="submit">絞り込む</button>
+</form>
+<div class="table-wrap card"><table><thead><tr><th>点検日</th><th>装置</th><th>点検表</th><th>担当者</th><th>結果</th><th></th></tr></thead><tbody>
+{% for record in records %}<tr><td>{{ record.inspection_date }}</td><td>{{ record.template.equipment.name }}</td><td>{{ record.template.name }}</td><td>{{ record.inspected_by.get_full_name|default:record.inspected_by.username }}</td><td><span class="badge {% if record.status == 'abnormal' %}abnormal{% else %}normal{% endif %}">{{ record.get_status_display }}</span></td><td><a href="{% url 'record_detail' record.id %}">詳細</a></td></tr>{% empty %}<tr><td colspan="6">該当する記録はありません。</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
