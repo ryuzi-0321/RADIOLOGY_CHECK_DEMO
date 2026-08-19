@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}点検設定｜放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="page-heading settings-heading">
+  <div>
+    <h1>点検設定</h1>
+    <p>装置、点検表、点検項目を設定します。</p>
+  </div>
+  <div class="button-group">
+    <a class="button primary" href="{% url 'equipment_create' %}">＋ 装置を追加</a>
+    <a class="button" href="{% url 'template_create' %}">＋ 点検表を追加</a>
+  </div>
+</div>
+
+<div class="notice-card">
+  <strong>管理者専用画面</strong>
+  <p>過去の点検履歴がある装置・点検表・項目は、安全のため削除できません。使用をやめる場合は「使用中」をOFFにしてください。</p>
+</div>
+
+<div class="settings-list">
+{% for equipment in equipment_list %}
+  <section class="card settings-equipment {% if not equipment.is_active %}inactive-card{% endif %}">
+    <div class="settings-row settings-equipment-header">
+      <div>
+        <div class="settings-title-line">
+          <h2>{{ equipment.name }}</h2>
+          {% if equipment.is_active %}<span class="badge normal">使用中</span>{% else %}<span class="badge pending">停止中</span>{% endif %}
+        </div>
+        <p>{{ equipment.category|default:'分類なし' }}／表示順 {{ equipment.display_order }}</p>
+      </div>
+      <div class="action-links">
+        <a href="{% url 'equipment_qr_page' equipment.id %}">QRコード</a>
+        <a href="{% url 'template_create_for_equipment' equipment.id %}">点検表追加</a>
+        <a href="{% url 'equipment_edit' equipment.id %}">編集</a>
+        <a class="danger-link" href="{% url 'equipment_delete' equipment.id %}">削除</a>
+      </div>
+    </div>
+
+    <div class="template-list">
+    {% for template in equipment.templates.all %}
+      <div class="template-block {% if not template.is_active %}inactive-block{% endif %}">
+        <div class="settings-row template-header">
+          <div>
+            <strong>{{ template.name }}</strong>
+            {% if not template.is_active %}<span class="mini-badge">停止中</span>{% endif %}
+            <small>{{ template.weekday_display }}／{{ template.items.count }}項目</small>
+          </div>
+          <div class="action-links">
+            <a href="{% url 'item_create' template.id %}">項目追加</a>
+            <a href="{% url 'template_edit' template.id %}">編集</a>
+            <a class="danger-link" href="{% url 'template_delete' template.id %}">削除</a>
+          </div>
+        </div>
+        <ol class="item-list">
+        {% for item in template.items.all %}
+          <li>
+            <div class="item-label">
+              <span>{{ item.label }}</span>
+              {% if item.is_required %}<span class="required-mark">必須</span>{% else %}<span class="optional-mark">任意</span>{% endif %}
+              <small>順番 {{ item.display_order }}</small>
+            </div>
+            <div class="action-links compact">
+              <a href="{% url 'item_edit' item.id %}">編集</a>
+              <a class="danger-link" href="{% url 'item_delete' item.id %}">削除</a>
+            </div>
+          </li>
+        {% empty %}
+          <li class="empty-item">点検項目がありません。</li>
+        {% endfor %}
+        </ol>
+      </div>
+    {% empty %}
+      <div class="empty-setting">点検表がありません。「点検表追加」から登録してください。</div>
+    {% endfor %}
+    </div>
+  </section>
+{% empty %}
+  <div class="card"><p>装置がありません。「装置を追加」から登録してください。</p></div>
+{% endfor %}
+</div>
+
+<p class="admin-link-note">ユーザー管理など高度な設定は <a href="/admin/">Django管理画面</a> から行えます。</p>
+{% endblock %}

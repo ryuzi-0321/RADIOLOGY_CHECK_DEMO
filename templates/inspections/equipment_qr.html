@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}{{ equipment.name }} QRコード｜放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="page-heading qr-page-heading no-print">
+  <div>
+    <h1>{{ equipment.name }} QRコード</h1>
+    <p>装置付近に掲示すると、スマホから本日の点検画面へすぐ移動できます。</p>
+  </div>
+  <div class="button-group">
+    <a class="button" href="{% url 'settings_home' %}">設定へ戻る</a>
+    <button class="button primary" type="button" onclick="window.print()">印刷する</button>
+  </div>
+</div>
+
+<section class="card qr-print-card">
+  <div class="qr-print-title">{{ equipment.name }}</div>
+  {% if equipment.category %}<div class="qr-category">{{ equipment.category }}</div>{% endif %}
+
+  <img class="qr-image" src="{% url 'equipment_qr_image' equipment.id %}" alt="{{ equipment.name }} 点検用QRコード">
+
+  <div class="qr-instruction">
+    <strong>点検はこちら</strong>
+    <span>スマートフォンのカメラでQRコードを読み取ってください。</span>
+  </div>
+
+  <div class="qr-url no-print">
+    <span>リンク先</span>
+    <code>{{ scan_url }}</code>
+  </div>
+
+  <div class="qr-note">※ 利用には点検管理システムへのログインが必要です。</div>
+</section>
+
+<div class="card qr-test-card no-print">
+  <h2>動作確認</h2>
+  <p>印刷前に、このPCからリンク先が正しく開くか確認できます。</p>
+  <a class="button" href="{% url 'equipment_scan' equipment.id %}">QRのリンク先を開く</a>
+  <p class="muted-note">ローカルPCの <code>127.0.0.1</code> で作ったQRは、そのPC以外のスマホからは開けません。スマホで実際に使うQRはPythonAnywhereへ公開した後に、この画面から印刷してください。</p>
+</div>
+{% endblock %}

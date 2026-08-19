@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}集計 | 放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="page-heading analytics-heading">
+  <div>
+    <h1>点検集計</h1>
+    <p>{{ start_date|date:'Y年n月j日' }} ～ {{ end_date|date:'Y年n月j日' }}{% if selected_equipment %}／{{ selected_equipment.name }}{% endif %}</p>
+  </div>
+  <a class="button" href="{% url 'export_analytics_excel' %}?start={{ start_date|date:'Y-m-d' }}&end={{ end_date|date:'Y-m-d' }}{% if selected_equipment %}&equipment={{ selected_equipment.id }}{% endif %}">集計をExcel出力</a>
+</div>
+
+<form method="get" class="card analytics-filter">
+  <label>開始日<input type="date" name="start" value="{{ start_date|date:'Y-m-d' }}"></label>
+  <label>終了日<input type="date" name="end" value="{{ end_date|date:'Y-m-d' }}"></label>
+  <label>装置
+    <select name="equipment">
+      <option value="">すべて</option>
+      {% for equipment in equipment_choices %}
+        <option value="{{ equipment.id }}" {% if selected_equipment and selected_equipment.id == equipment.id %}selected{% endif %}>{{ equipment.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button class="button primary" type="submit">集計する</button>
+</form>
+
+<div class="stats analytics-stats">
+  <div class="stat card"><span>実施対象</span><strong>{{ expected_total }}</strong></div>
+  <div class="stat card stat-complete"><span>実施済み</span><strong>{{ completed_total }}</strong></div>
+  <div class="stat card stat-pending"><span>未実施</span><strong>{{ pending_total }}</strong></div>
+  <div class="stat card danger"><span>異常あり</span><strong>{{ abnormal_total }}</strong></div>
+  <div class="stat card danger"><span>未解決異常</span><strong>{{ unresolved_total }}</strong></div>
+</div>
+
+<section class="card analytics-rate-card">
+  <div class="section-heading compact">
+    <div><h2>点検実施率</h2><p>実施対象 {{ expected_total }}件のうち {{ completed_total }}件を実施</p></div>
+    <strong class="rate-number">{{ implementation_rate }}%</strong>
+  </div>
+  <div class="progress-track"><span style="width: {{ implementation_bar }}%"></span></div>
+  <p class="analytics-note">実施対象回数は、現在設定されている点検表の実施曜日を指定期間に当てはめて算出しています。</p>
+</section>
+
+<div class="analytics-grid">
+  <section class="card analytics-panel">
+    <div class="section-heading compact"><div><h2>装置別の状況</h2><p>実施率と異常件数を比較できます。</p></div></div>
+    <div class="equipment-stat-list">
+      {% for row in equipment_stats %}
+      <div class="equipment-stat-row">
+        <div class="equipment-stat-title"><strong>{{ row.equipment.name }}</strong><span>{{ row.completed }}/{{ row.expected }}件</span></div>
+        <div class="progress-track small"><span style="width: {{ row.rate_bar }}%"></span></div>
+        <div class="equipment-stat-meta"><span>実施率 {{ row.rate }}%</span><span>未実施 {{ row.pending }}</span><span class="danger-text">異常 {{ row.abnormal }}</span></div>
+      </div>
+      {% empty %}<p class="empty-message">対象となる装置がありません。</p>{% endfor %}
+    </div>
+  </section>
+
+  <section class="card analytics-panel">
+    <div class="section-heading compact"><div><h2>異常項目ランキング</h2><p>指定期間の上位15項目です。</p></div></div>
+    {% if item_ranking %}
+      <div class="ranking-list">
+      {% for row in item_ranking %}
+        <div class="ranking-row">
+          <div class="ranking-label"><strong>{{ forloop.counter }}. {{ row.label }}</strong><small>{{ row.equipment_name }}</small></div>
+          <div class="ranking-bar"><span style="width: {{ row.bar }}%"></span></div>
+          <b>{{ row.count }}回</b>
+        </div>
+      {% endfor %}
+      </div>
+    {% else %}<p class="empty-message">この期間の異常項目はありません。</p>{% endif %}
+  </section>
+</div>
+
+<section class="card analytics-panel monthly-panel">
+  <div class="section-heading compact"><div><h2>月別の異常件数推移</h2><p>指定期間内の月ごとの実施件数と異常件数です。</p></div></div>
+  {% if monthly_trend %}
+  <div class="monthly-chart">
+    {% for row in monthly_trend %}
+    <div class="month-row">
+      <span class="month-label">{{ row.label }}</span>
+      <div class="month-bar-track"><span style="width: {{ row.bar }}%"></span></div>
+      <span class="month-count">異常 {{ row.abnormal }} / 実施 {{ row.completed }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="empty-message">表示できるデータがありません。</p>{% endif %}
+</section>
+{% endblock %}

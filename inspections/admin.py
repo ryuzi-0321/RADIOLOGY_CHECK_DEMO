@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Equipment, InspectionAnswer, InspectionItem, InspectionRecord, InspectionTemplate
+from .models import AbnormalIssue, AbnormalIssueUpdate, Equipment, InspectionAnswer, InspectionItem, InspectionRecord, InspectionTemplate
 
 
 class InspectionItemInline(admin.TabularInline):
@@ -26,7 +26,7 @@ class InspectionTemplateAdmin(admin.ModelAdmin):
 class InspectionAnswerInline(admin.TabularInline):
     model = InspectionAnswer
     extra = 0
-    readonly_fields = ['item', 'checked', 'note']
+    readonly_fields = ['item', 'result', 'checked', 'note', 'photo']
     can_delete = False
 
 
@@ -37,3 +37,17 @@ class InspectionRecordAdmin(admin.ModelAdmin):
     search_fields = ['template__equipment__name', 'abnormal_details', 'action_taken', 'inspected_by__username']
     readonly_fields = ['created_at', 'updated_at']
     inlines = [InspectionAnswerInline]
+
+
+class AbnormalIssueUpdateInline(admin.TabularInline):
+    model = AbnormalIssueUpdate
+    extra = 0
+    readonly_fields = ['status', 'note', 'updated_by', 'created_at']
+    can_delete = False
+
+
+@admin.register(AbnormalIssue)
+class AbnormalIssueAdmin(admin.ModelAdmin):
+    list_display = ['answer', 'status', 'updated_at', 'resolved_at']
+    list_filter = ['status']
+    inlines = [AbnormalIssueUpdateInline]

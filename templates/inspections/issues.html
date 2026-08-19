@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}異常対応 | 放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="page-heading"><div><h1>異常対応</h1><p>異常の発生から対応完了までを管理します。</p></div></div>
+<div class="issue-filter card">
+  <a class="{% if status_filter == 'unresolved' %}active{% endif %}" href="?status=unresolved">未解決</a>
+  <a class="{% if status_filter == 'open' %}active{% endif %}" href="?status=open">未対応</a>
+  <a class="{% if status_filter == 'in_progress' %}active{% endif %}" href="?status=in_progress">対応中</a>
+  <a class="{% if status_filter == 'resolved' %}active{% endif %}" href="?status=resolved">対応済み</a>
+  <a class="{% if status_filter == 'all' %}active{% endif %}" href="?status=all">すべて</a>
+</div>
+<section class="card">
+{% if issues %}<div class="issue-list">
+{% for issue in issues %}<a class="issue-row" href="{% url 'issue_detail' issue.id %}">
+  <div><strong>{{ issue.equipment.name }}・{{ issue.answer.item.label }}</strong><span>{{ issue.answer.record.inspection_date|date:'Y年n月j日' }}／{{ issue.answer.record.template.name }}</span><p>{{ issue.answer.note|default:'異常内容の記載なし'|truncatechars:100 }}</p></div>
+  <span class="issue-status {{ issue.status }}">{{ issue.get_status_display }}</span>
+</a>{% endfor %}
+</div>{% else %}<p class="empty-message">該当する異常はありません。</p>{% endif %}
+</section>
+{% endblock %}

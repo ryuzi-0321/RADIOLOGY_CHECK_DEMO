@@ -1,6 +1,50 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-heading"><div><a class="back" href="{% url 'history' %}">← 履歴へ戻る</a><h1>{{ record.template.equipment.name }} {{ record.template.name }}</h1><p>{{ record.inspection_date }}／{{ record.inspected_by.get_full_name|default:record.inspected_by.username }}</p></div><span class="badge {% if record.status == 'abnormal' %}abnormal{% else %}normal{% endif %}">{{ record.get_status_display }}</span></div>
-<section class="card"><h2>点検項目</h2>{% for answer in record.answers.all %}<div class="detail-row"><strong>{% if answer.checked %}✓{% else %}—{% endif %} {{ answer.item.label }}</strong><span>{{ answer.note|default:'メモなし' }}</span></div>{% endfor %}</section>
-<section class="card"><h2>異常・対応</h2><dl><dt>異常内容</dt><dd>{{ record.abnormal_details|default:'なし'|linebreaksbr }}</dd><dt>対応内容</dt><dd>{{ record.action_taken|default:'なし'|linebreaksbr }}</dd><dt>登録日時</dt><dd>{{ record.created_at }}</dd></dl></section>
+<div class="page-heading">
+  <div>
+    <a class="back" href="{% url 'history' %}">← 履歴へ戻る</a>
+    <h1>{{ record.template.equipment.name }} {{ record.template.name }}</h1>
+    <p>{{ record.inspection_date }}／{{ record.inspected_by.get_full_name|default:record.inspected_by.username }}</p>
+  </div>
+  <span class="badge {% if record.status == 'abnormal' %}abnormal{% else %}normal{% endif %}">{{ record.get_status_display }}</span>
+</div>
+
+<section class="card">
+  <h2>点検項目</h2>
+  <div class="inspection-detail-list">
+    {% for answer in record.answers.all %}
+      <div class="detail-result-row {% if answer.result == 'abnormal' %}detail-abnormal{% elif answer.result == 'normal' %}detail-normal{% endif %}">
+        <div class="detail-result-main">
+          <strong>{{ answer.item.label }}</strong>
+          {% if answer.result == 'normal' %}
+            <span class="result-badge normal">正常</span>
+          {% elif answer.result == 'abnormal' %}
+            <span class="result-badge abnormal">異常</span>
+          {% else %}
+            <span class="result-badge pending">未入力</span>
+          {% endif %}
+        </div>
+        {% if answer.note %}<p>{{ answer.note }}</p>{% endif %}
+        {% if answer.result == 'abnormal' and answer.issue %}<p><a class="button small" href="{% url 'issue_detail' answer.issue.id %}">対応状況：{{ answer.issue.get_status_display }} →</a></p>{% endif %}
+        {% if answer.photo %}
+          <div class="detail-photo">
+            <a href="{{ answer.photo.url }}" target="_blank" rel="noopener" title="写真を拡大">
+              <img src="{{ answer.photo.url }}" alt="{{ answer.item.label }}の異常写真">
+            </a>
+            <small>写真をクリックすると拡大表示します</small>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>点検全体の補足</h2>
+  <dl>
+    <dt>全体メモ</dt><dd>{{ record.abnormal_details|default:'なし'|linebreaksbr }}</dd>
+    <dt>対応内容</dt><dd>{{ record.action_taken|default:'なし'|linebreaksbr }}</dd>
+    <dt>登録日時</dt><dd>{{ record.created_at }}</dd>
+  </dl>
+</section>
 {% endblock %}

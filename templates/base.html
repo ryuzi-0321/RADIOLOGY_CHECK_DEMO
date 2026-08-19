@@ -15,7 +15,9 @@
       <nav>
         <a href="{% url 'dashboard' %}">本日の点検</a>
         <a href="{% url 'history' %}">履歴</a>
-        {% if user.is_staff %}<a href="/admin/">管理</a>{% endif %}
+        <a href="{% url 'analytics' %}">集計</a>
+        <a href="{% url 'issues' %}">異常対応</a>
+        {% if user.is_staff %}<a href="{% url 'settings_home' %}">設定</a>{% endif %}
         <form action="{% url 'logout' %}" method="post" class="inline-form">
           {% csrf_token %}
           <button class="link-button" type="submit">ログアウト</button>

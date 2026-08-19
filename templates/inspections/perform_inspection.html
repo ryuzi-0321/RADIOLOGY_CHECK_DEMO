@@ -1,27 +1,150 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-heading"><div><a class="back" href="{% url 'dashboard' %}">← 戻る</a><h1>{{ template.equipment.name }} {{ template.name }}</h1><p>{{ today|date:'Y年n月j日' }}／担当者：{{ user.get_full_name|default:user.username }}</p></div></div>
-<form method="post" class="inspection-form">
+<div class="page-heading">
+  <div>
+    <a class="back" href="{% url 'dashboard' %}">← 戻る</a>
+    <h1>{{ template.equipment.name }} {{ template.name }}</h1>
+    <p>{{ today|date:'Y年n月j日' }}／担当者：{{ user.get_full_name|default:user.username }}</p>
+  </div>
+</div>
+
+<div class="privacy-warning" role="note">
+  <strong>写真登録時の注意</strong>
+  <span>患者さん・職員・氏名・患者ID・検査画面など、個人を特定できる情報が写った写真は登録しないでください。</span>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="inspection-form" id="inspection-form">
   {% csrf_token %}
   {{ answer_formset.management_form }}
+
   <section class="card">
-    <h2>点検項目</h2>
-    {% for form in answer_formset %}
-      <div class="check-row">
-        {{ form.item_id }}{{ form.required_item }}
-        <label class="check-label">{{ form.checked }}<span>{{ form.label.value }}</span></label>
-        {{ form.note }}
+    <div class="section-heading compact">
+      <div>
+        <h2>点検項目</h2>
+        <p>各項目を「正常」または「異常」で判定してください。異常時は必要に応じて写真を添付できます。</p>
       </div>
-    {% endfor %}
+    </div>
+
+    <div class="inspection-item-list">
+      {% for form in answer_formset %}
+        <div class="inspection-item-card{% if form.result.value == 'abnormal' %} item-abnormal{% elif form.result.value == 'normal' %} item-normal{% endif %}">
+          {{ form.item_id }}{{ form.required_item }}{{ form.existing_photo_url }}
+
+          <div class="inspection-item-head">
+            <div>
+              <strong>{{ form.label.value }}</strong>
+              {% if form.required_item.value %}<span class="required-mark">必須</span>{% else %}<span class="optional-mark">任意</span>{% endif %}
+            </div>
+          </div>
+
+          <div class="result-choice-row">
+            {% for radio in form.result %}
+              <label class="result-choice{% if radio.data.value == 'normal' %} result-normal{% else %} result-abnormal{% endif %}">
+                {{ radio.tag }}
+                <span>{{ radio.choice_label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+          {% if form.result.errors %}<div class="field-error">{{ form.result.errors }}</div>{% endif %}
+
+          <div class="item-note-wrap{% if form.result.value != 'abnormal' %} is-hidden{% endif %}">
+            <label for="{{ form.note.id_for_label }}">異常内容・メモ</label>
+            {{ form.note }}
+            {% if form.note.errors %}<div class="field-error">{{ form.note.errors }}</div>{% endif %}
+
+            <div class="photo-field-wrap">
+              <label for="{{ form.photo.id_for_label }}">📷 異常写真（任意）</label>
+              <p class="photo-help">スマホでは「写真を撮る」または写真ライブラリから選択できます。JPEG・PNG等、8MB以下。</p>
+
+              {% if form.existing_photo_url.value %}
+                <div class="existing-photo">
+                  <a href="{{ form.existing_photo_url.value }}" target="_blank" rel="noopener">
+                    <img src="{{ form.existing_photo_url.value }}" alt="現在登録されている異常写真">
+                  </a>
+                  <span>現在の写真</span>
+                </div>
+                <label class="remove-photo-label">
+                  {{ form.remove_photo }}
+                  <span>現在の写真を削除する</span>
+                </label>
+              {% else %}
+                <div class="existing-photo is-hidden"></div>
+                <div class="is-hidden">{{ form.remove_photo }}</div>
+              {% endif %}
+
+              {{ form.photo }}
+              {% if form.photo.errors %}<div class="field-error">{{ form.photo.errors }}</div>{% endif %}
+              <div class="new-photo-preview is-hidden">
+                <img alt="選択した写真のプレビュー">
+                <span>今回選択した写真</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
   </section>
+
   <section class="card">
-    <h2>総合結果</h2>
+    <h2>点検全体の補足</h2>
+    <p class="muted-note">総合結果は、各項目の判定から自動で決まります。1項目でも「異常」があれば「異常あり」になります。</p>
     {{ record_form.non_field_errors }}
-    <div class="radio-list">{{ record_form.status }}</div>
-    {{ record_form.status.errors }}
-    <label>異常内容{{ record_form.abnormal_details }}{{ record_form.abnormal_details.errors }}</label>
-    <label>対応内容{{ record_form.action_taken }}{{ record_form.action_taken.errors }}</label>
+
+    <label class="block-label">{{ record_form.abnormal_details.label }}{{ record_form.abnormal_details }}{{ record_form.abnormal_details.errors }}</label>
+    <label class="block-label">{{ record_form.action_taken.label }}{{ record_form.action_taken }}{{ record_form.action_taken.errors }}</label>
   </section>
+
   <button class="button primary large full" type="submit">{% if existing %}点検内容を更新{% else %}点検を保存{% endif %}</button>
 </form>
+
+<script>
+(function () {
+  function updateCard(card) {
+    const checked = card.querySelector('input[type="radio"]:checked');
+    const noteWrap = card.querySelector('.item-note-wrap');
+    card.classList.remove('item-normal', 'item-abnormal');
+
+    if (!checked) {
+      noteWrap.classList.add('is-hidden');
+      return;
+    }
+
+    if (checked.value === 'abnormal') {
+      card.classList.add('item-abnormal');
+      noteWrap.classList.remove('is-hidden');
+    } else {
+      card.classList.add('item-normal');
+      noteWrap.classList.add('is-hidden');
+    }
+  }
+
+  document.querySelectorAll('.inspection-item-card').forEach(function (card) {
+    card.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+      radio.addEventListener('change', function () { updateCard(card); });
+    });
+
+    const fileInput = card.querySelector('.photo-input');
+    const preview = card.querySelector('.new-photo-preview');
+    const previewImage = preview ? preview.querySelector('img') : null;
+    if (fileInput && preview && previewImage) {
+      fileInput.addEventListener('change', function () {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          preview.classList.add('is-hidden');
+          previewImage.removeAttribute('src');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          previewImage.src = event.target.result;
+          preview.classList.remove('is-hidden');
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    updateCard(card);
+  });
+})();
+</script>
 {% endblock %}

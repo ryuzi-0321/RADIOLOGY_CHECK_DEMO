@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ equipment.name }} 点検｜放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <div class="eyebrow">QRコードからアクセス</div>
+    <h1>{{ equipment.name }}</h1>
+    <p>{{ today|date:'Y年n月j日' }} の点検</p>
+  </div>
+  <a class="button" href="{% url 'dashboard' %}">本日の点検へ</a>
+</div>
+
+{% if rows %}
+  <div class="card qr-select-card">
+    <h2>点検表を選択</h2>
+    <p class="muted-note">本日実施する点検表が複数あります。</p>
+    <div class="qr-template-list">
+      {% for row in rows %}
+      <a class="qr-template-button {% if row.record.status == 'abnormal' %}has-abnormal{% elif row.record %}is-complete{% endif %}" href="{% url 'perform_inspection' row.template.id %}">
+        <span>
+          <strong>{{ row.template.name }}</strong>
+          <small>{{ row.template.items.count }}項目／{{ row.template.weekday_display }}</small>
+        </span>
+        <span class="qr-template-status">
+          {% if row.record.status == 'abnormal' %}異常あり・編集{% elif row.record %}点検済み・編集{% else %}点検する{% endif %}
+          <b>›</b>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+{% else %}
+  <div class="card qr-empty-card">
+    <div class="qr-empty-icon">✓</div>
+    <h2>本日の点検はありません</h2>
+    <p>{{ equipment.name }}には、本日実施予定の点検表が設定されていません。</p>
+    {% if active_templates %}
+      <div class="qr-schedule-list">
+        <strong>登録されている点検表</strong>
+        {% for template in active_templates %}
+          <div><span>{{ template.name }}</span><small>{{ template.weekday_display }}</small></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}｜放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><h1>{{ title }}</h1></div></div>
+  <div class="card delete-card">
+    <p><strong>「{{ object }}」</strong>を削除しますか？</p>
+    {% if warning %}<p class="delete-warning">{{ warning }}</p>{% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-actions">
+        <button class="button danger-button" type="submit">削除する</button>
+        <a class="button" href="{% url 'settings_home' %}">キャンセル</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

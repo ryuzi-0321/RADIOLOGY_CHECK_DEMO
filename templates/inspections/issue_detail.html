@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}異常対応 | 放射線科 点検管理{% endblock %}
+{% block content %}
+<div class="page-heading"><div><a class="back" href="{% url 'issues' %}">← 異常対応一覧へ</a><h1>{{ issue.equipment.name }}・{{ issue.answer.item.label }}</h1><p>{{ issue.answer.record.inspection_date|date:'Y年n月j日' }}／{{ issue.answer.record.template.name }}</p></div><span class="issue-status {{ issue.status }} large">{{ issue.get_status_display }}</span></div>
+<div class="issue-detail-grid">
+<section class="card"><h2>発生内容</h2><dl><dt>異常内容</dt><dd>{{ issue.answer.note|default:'記載なし' }}</dd><dt>点検者</dt><dd>{{ issue.answer.record.inspected_by.get_full_name|default:issue.answer.record.inspected_by.username }}</dd><dt>点検記録</dt><dd><a href="{% url 'record_detail' issue.answer.record.id %}">元の点検記録を見る</a></dd>{% if issue.resolved_at %}<dt>対応完了</dt><dd>{{ issue.resolved_at|date:'Y年n月j日 H:i' }}</dd>{% endif %}</dl>{% if issue.answer.photo %}<div class="detail-photo"><a href="{{ issue.answer.photo.url }}" target="_blank" rel="noopener"><img src="{{ issue.answer.photo.url }}" alt="異常写真"></a></div>{% endif %}</section>
+<section class="card"><h2>対応を記録</h2><form method="post" class="settings-form">{% csrf_token %}{{ form.as_p }}<button class="button primary" type="submit">対応内容を保存</button></form></section>
+</div>
+<section class="card"><h2>対応履歴</h2><div class="timeline"><div class="timeline-item"><strong>異常発生</strong><span>{{ issue.answer.record.inspection_date|date:'Y年n月j日' }}</span><p>{{ issue.answer.note }}</p></div>{% for update in issue.updates.all %}<div class="timeline-item"><strong>{{ update.get_status_display }}</strong><span>{{ update.created_at|date:'Y年n月j日 H:i' }}／{{ update.updated_by.get_full_name|default:update.updated_by.username }}</span><p>{{ update.note|linebreaksbr }}</p></div>{% empty %}<p class="empty-message">まだ対応履歴はありません。</p>{% endfor %}</div></section>
+{% endblock %}

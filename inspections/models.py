@@ -1,6 +1,14 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from pathlib import Path
+import uuid
+
+
+def inspection_photo_upload_path(instance, filename):
+    """元ファイル名を保存せず、推測しにくいUUID名で画像を保存する。"""
+    suffix = Path(filename).suffix.lower() or '.jpg'
+    return f'inspection_photos/{timezone.localdate():%Y/%m}/{uuid.uuid4().hex}{suffix}'
 
 
 class Equipment(models.Model):
@@ -22,6 +30,34 @@ class InspectionTemplate(models.Model):
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, related_name='templates', verbose_name='装置')
     name = models.CharField('点検表名', max_length=100, default='始業点検')
     is_active = models.BooleanField('使用中', default=True)
+    weekdays = models.CharField(
+        '実施曜日',
+        max_length=20,
+        default='0,1,2,3,4,5,6',
+        help_text='0=月曜日、6=日曜日',
+    )
+
+    WEEKDAY_LABELS = ('月', '火', '水', '木', '金', '土', '日')
+
+    def weekday_numbers(self):
+        values = []
+        for value in self.weekdays.split(','):
+            value = value.strip()
+            if value.isdigit() and 0 <= int(value) <= 6:
+                values.append(int(value))
+        return sorted(set(values))
+
+    def runs_on(self, target_date):
+        return target_date.weekday() in self.weekday_numbers()
+
+    @property
+    def weekday_display(self):
+        numbers = self.weekday_numbers()
+        if numbers == list(range(7)):
+            return '毎日'
+        if numbers == list(range(5)):
+            return '平日'
+        return '・'.join(self.WEEKDAY_LABELS[number] for number in numbers) or '未設定'
 
     class Meta:
         ordering = ['equipment__display_order', 'equipment__name', 'name']
@@ -77,10 +113,16 @@ class InspectionRecord(models.Model):
 
 
 class InspectionAnswer(models.Model):
+    class Result(models.TextChoices):
+        NORMAL = 'normal', '正常'
+        ABNORMAL = 'abnormal', '異常'
+
     record = models.ForeignKey(InspectionRecord, on_delete=models.CASCADE, related_name='answers', verbose_name='点検記録')
     item = models.ForeignKey(InspectionItem, on_delete=models.PROTECT, related_name='answers', verbose_name='点検項目')
     checked = models.BooleanField('確認済み', default=False)
-    note = models.CharField('項目メモ', max_length=255, blank=True)
+    result = models.CharField('項目結果', max_length=20, choices=Result.choices, blank=True, default='')
+    note = models.CharField('異常時コメント', max_length=255, blank=True)
+    photo = models.ImageField('異常写真', upload_to=inspection_photo_upload_path, blank=True)
 
     class Meta:
         ordering = ['item__display_order', 'item_id']
@@ -92,3 +134,44 @@ class InspectionAnswer(models.Model):
 
     def __str__(self):
         return f'{self.record} / {self.item}'
+
+
+class AbnormalIssue(models.Model):
+    class Status(models.TextChoices):
+        OPEN = 'open', '未対応'
+        IN_PROGRESS = 'in_progress', '対応中'
+        RESOLVED = 'resolved', '対応済み'
+
+    answer = models.OneToOneField(InspectionAnswer, on_delete=models.CASCADE, related_name='issue', verbose_name='異常項目')
+    status = models.CharField('対応状況', max_length=20, choices=Status.choices, default=Status.OPEN)
+    created_at = models.DateTimeField('発生登録日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+    resolved_at = models.DateTimeField('対応完了日時', null=True, blank=True)
+
+    class Meta:
+        ordering = ['status', '-answer__record__inspection_date', '-created_at']
+        verbose_name = '異常対応'
+        verbose_name_plural = '異常対応'
+
+    @property
+    def equipment(self):
+        return self.answer.record.template.equipment
+
+    def __str__(self):
+        return f'{self.answer.record.inspection_date} {self.equipment.name} / {self.answer.item.label}'
+
+
+class AbnormalIssueUpdate(models.Model):
+    issue = models.ForeignKey(AbnormalIssue, on_delete=models.CASCADE, related_name='updates', verbose_name='異常対応')
+    status = models.CharField('変更後の状況', max_length=20, choices=AbnormalIssue.Status.choices)
+    note = models.TextField('対応内容')
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='abnormal_issue_updates', verbose_name='対応者')
+    created_at = models.DateTimeField('対応日時', auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        verbose_name = '異常対応履歴'
+        verbose_name_plural = '異常対応履歴'
+
+    def __str__(self):
+        return f'{self.issue} - {self.get_status_display()}'
